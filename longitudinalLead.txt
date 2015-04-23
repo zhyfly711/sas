@@ -1,0 +1,121 @@
+* this is the codes for an experiment that analyze the toxic effects of lead in children. Different design matrix were used to find out the best AIC and BIC
+ 
+data lead;
+input id age gender week lead trt;
+time=week;
+ 
+datalines;
+ 
+;
+ 
+title "INDEPENDENCE EACH GROUP";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+run;
+ 
+title "COMPOUND SYMMETRY, SAME FOR ALL GROUPS";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=cs subject=id;
+run;
+ 
+title "COMPOUND SYMMETRY, DIFFERENT IN EACH GROUP";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=cs subject=id group=trt;
+run;
+ 
+title "ONE-DEPENDENT, SAME FOR ALL GROUP";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=toep(2) subject=id;
+run;
+ 
+title "ONE-DEPENDENT, DIFFRENT FOR EACH GROUP";
+proc mixed data=lead method=ml;
+class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=toep(2) subject=id group=trt;
+run;
+ 
+title "AR(1), SAME IN EACH GROUP";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=ar(1) subject=id;
+run;
+ 
+title "AR(1), DIFFERENT IN EACH GROUP";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=ar(1) subject=id group=trt;
+run;
+title "UNSTRUCTURED, SAME";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=un subject=id;
+run;
+ 
+title "UNSTRUCTURED, DIFFERENT IN EACH GROUP";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=un subject=id group=trt;
+run;
+ 
+title "UNSTRUCTURED, SAME IN EACH GROUP,COVARIANCE MATRIX";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=un subject=id r=1,3,44,82 rcorr=1,3,44,82;
+run;
+ 
+title "UNSTRUCTURED, SAME, CHISQ TEST";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age gender age*gender trt*week trt*age*week trt*gender*week
+             trt*age*gender*week / solution;
+  repeated time / type=un subject=id;
+  contrast '(d) no gender' 
+     gender 1 age*gender 0 trt*gender*week 0 0 0 trt*age*gender*week 0 0 0,
+     gender 0 age*gender 1 trt*gender*week 0 0 0 trt*age*gender*week 0 0 0,
+     gender 0 age*gender 0 trt*gender*week 1 0 0 trt*age*gender*week 0 0 0,
+     gender 0 age*gender 0 trt*gender*week 0 1 0 trt*age*gender*week 0 0 0,
+     gender 0 age*gender 0 trt*gender*week 0 0 1 trt*age*gender*week 0 0 0,
+     gender 0 age*gender 0 trt*gender*week 0 0 0 trt*age*gender*week 1 0 0,
+     gender 0 age*gender 0 trt*gender*week 0 0 0 trt*age*gender*week 0 1 0,
+     gender 0 age*gender 0 trt*gender*week 0 0 0 trt*age*gender*week 0 0 1 /
+             chisq;
+run;
+ 
+title "REDUCED MODEL WITH NO GENDER";
+proc mixed data=lead method=ml;
+  class trt id time;
+  model lead = age trt*week trt*age*week / solution;
+  repeated time / type=un subject=id;
+  contrast '(e) age @ baseline' age 1 / chisq;
+  estimate '(e) mean lead @ 0, >24' intercept 1 age 1;
+  contrast '(f) age in change' trt*age*week 1 0 0, 
+                                trt*age*week 0 1 0,
+                                trt*age*week 0 0 1 /chisq;
+  constrast '(g) slp diff age=0' trt*week 1 -1  0,
+                          trt*week 1  0 -1 /chisq;
+  constrast '(g) slp diff age=1' trt*week 1 -1 0 trt*age*week 1 -1 0,
+                                 trt*week 1 0 -1 trt*age*week 1 0 -1 / chisq;  
+run;               

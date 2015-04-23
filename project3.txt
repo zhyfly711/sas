@@ -1,0 +1,141 @@
+
+/* Output a pdf file into the following folder */
+ods pdf file = 'C:\Users\zhyfly711\Desktop\results\project3.pdf';
+
+libname orion 'C:\Users\zhyfly711\Desktop\data';
+data bonus;
+   set orion.nonsales;
+   if country = 'US' then bonus = 500;
+   else bonus = 300;
+run;
+proc print data = bonus;
+run;
+
+* use proc freq to find out different bonus amounts assigned to different countries.;
+proc freq data = bonus;
+   tables country * bonus / nopercent norow nocol;
+run;
+
+*Clean the data and reassign.;
+data work.bonus;
+   set orion.nonsales;
+   if upcase(country) = 'US' then bonus = 500;
+   else bonus = 300;
+run;
+proc freq data = bonus;
+   tables bonus;
+run;
+
+* assigne bonus values to different countries.;
+data bonus;
+   set bonus;
+   if country = 'US' then bonus = 500;
+   else bonus = 300;
+run;
+
+*First print some observations and take a look. Then create variable Bday2009, BdayDOW2009, and Age2009
+         Finally print out the first 10 observations to confirm everything is correct.;
+
+proc print data = orion.customer (obs = 10);
+run;
+
+data birthday;
+   set orion.customer;
+   month = month(birth_date);
+   day = day(birth_date);
+   Bday2009 = MDY(month, day, 2009);
+   BdayDOW2009 = weekday(Bday2009);
+   Age2009 = (Bday2009 - birth_date)/365.25;
+run;
+
+proc print data = birthday (obs =10);
+run;
+
+* Get rid of some variables. Print out the first 5 obs to confirm;
+data birthday;
+   set birthday;
+   keep customer_name birth_date Bday2009 BdayDOW2009 Age2009;
+run;
+proc print data = birthday (obs = 5);
+run;
+
+* format Bday2009 and Age2009. Print first 5 obs to confirm.;
+data birthday;
+   set birthday;
+   format Bday2009 date9.
+          Age2009 comma2.;
+run;
+proc print data = birthday(obs = 5);
+run;
+
+
+
+* Print customers born in June.There are a total of 6 observations;
+proc print data = birthday;
+   where month(Bday2009) = 6;
+run;
+
+***********************************************************************************************************
+
+
+
+
+* create a temp dataset and drop some variables from employee_donations;
+data donations;
+   set orion.employee_donations;
+   drop recipients paid_by;
+run;
+
+* create a temp dataset from addresses and drop some variables from employee_addresses;
+data addresses;
+   set orion.employee_addresses;
+   where country = 'US';
+   drop employee_name street_id;
+run;
+
+* sort by employee_id without overwrite the old datasets.;
+proc sort data = donations out = NewDonation;
+   by employee_id;
+run;
+proc sort data = addresses out = NewAddress;
+   by employee_id;
+run;
+
+
+* merge the two datasets into one by employee_id.;
+data donate_address;
+   merge newDonation newAddress;
+   by employee_id;
+run;
+
+* employee_id value in addresses but not in donations;
+data addonly;
+   merge newdonation (in = donate)
+         newAddress (in = address);
+   by employee_id;
+   if donate = 0 and address = 1;
+run;
+
+*employee_id value in donations but not in addresses;
+data dononly;
+   merge newdonation (in = donate)
+         newaddress (in = address);
+   by employee_id;
+   if donate = 1 and address = 0;
+run;
+
+
+* get rid of the missing variables.;
+data addonly;
+   set addonly;
+   drop qtr1 qtr2 qtr3 qtr4;
+run;
+
+data dononly;
+   set dononly;
+   drop street_number street_name city state postal_code country;
+run;
+
+
+
+

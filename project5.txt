@@ -1,0 +1,123 @@
+
+
+libname orion 'C:\Users\zhyfly711\Desktop\data';
+
+*first take a look at the data set;
+proc print data = orion.lapband (obs = 5);
+run;
+
+*Delete all the measures with missing values;
+data completers;
+    set orion.lapband;
+	where wgtlbs0 ^= . and wgtlbs2 ^= . and wgtlbs4 ^= . and wgtlbs6 ^= . and wgtlbs12 ^= . 
+          and wgtlbs18 ^= . and wgtlbs24 ^= .;
+run;
+
+*change all the -9 to .;
+data noneg9;
+   set completers;
+   array weight{*} wgtlbs:;
+   do i = 1 to dim(weight);
+      if weight{i} = -9 then
+	     weight{i} = .;
+	end;
+run;
+
+/* calculate summary statistics */
+
+*create a new data set which also includes the weight in kg.;
+data noneg9 (drop = weight1 - weight7 i);
+   set noneg9;
+   array weight{*} wgtlbs:;
+   array wgtkgs{7};   
+   do i = 1 to dim(weight);
+       wgtkgs{i} = weight{i} * 0.4536;	   
+   end;
+run;
+
+*Produce summary statistics;
+data summary_stat;
+   set noneg9;
+   array weight{7} wgtlbs:;
+   array weight2{7} wgtkgs:;
+   do i = 1 to 7;
+      if weight{i} ^= . then 
+         do;
+	     lbweight = weight{i};
+		 kgweight = weight2{i};
+		 output;
+		 end;
+	end;
+run;
+
+proc means data = summary_stat;
+  class i;
+  var lbweight kgweight;
+run;
+
+
+*get the percentage change;
+data pctchange;
+   set noneg9;
+   array pctchange{6} pctwl2 pctwl4 pctwl6 pctwl12 pctwl18 pctwl24;
+   array weight{6} wgtlbs2 wgtlbs4 wgtlbs6 wgtlbs12 wgtlbs18 wgtlbs24;
+   do i = 1 to 6;
+      if weight{i} ^= . then
+	  do;
+      pctchange{i} = ((weight{i} - wgtlbs0)/wgtlbs0) * 100;
+	  end;
+   end;
+run;
+
+*get the summary statistics;
+proc means data = pctchange;
+   var pctwl2 pctwl4 pctwl6 pctwl12 pctwl18 pctwl24;
+run;
+
+
+*find the difference from weight loss goals;
+data target;
+   set pctchange;
+   array target_pct{6} _temporary_ (.10 .14 .18 .20 .22 .27);
+   array target{6} _temporary_;
+   array from_target{6} from_target2 from_target4 from_target6 from_target12 from_target18 from_target24;   
+   array weight{6} wgtlbs2 wgtlbs4 wgtlbs6 wgtlbs12 wgtlbs18 wgtlbs24;
+   do i = 1 to 6;
+      target{i} = wgtlbs0 - wgtlbs0 * target_pct{i};
+	  if weight{i} ^= . then from_target{i} = weight{i} - target{i};
+   end;
+run;
+
+*Question 5(b);
+data new;
+   set target (keep = from_target2 from_target4 from_target6 from_target12 from_target18 from_target24);
+   array target{6} from_target2 from_target4 from_target6 from_target12 from_target18 from_target24;
+   array mon{6} _temporary_ (2 4 6 12 18 24);
+   do i = 1 to 6;
+       month = mon{i};
+	   if target{i} ^= . then 
+       do;
+	      if target{i} > 0 then met = 'Did not met goal';
+		  else met = 'met goal';
+		  output;
+	   end;
+   end;
+run;
+
+proc freq data = new;
+    table month * met /nopercent norow nocol;
+run;
+
+
+
+
+
+
+
+
+
+
+
+
+
+

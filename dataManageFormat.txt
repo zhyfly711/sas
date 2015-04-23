@@ -1,0 +1,145 @@
+
+libname orion 'C:\Users\zhyfly711\Desktop\data';
+
+/* Output a pdf file into the following folder */
+ods pdf file = 'C:\Users\zhyfly711\Desktop\results\HW4.pdf';
+
+/*Check the contents first, then assign the user defined format*/
+proc contents data = orion.nonsales;
+run;
+
+proc format;
+   value $gender 'F' = 'Female'
+                 'M' = 'Male'
+		 other = 'Invalid code';
+run;
+
+/*Create a table that provides frequency and percentage */
+
+proc freq data = orion.nonsales;
+tables gender /missing;
+format gender $gender.;
+run;
+
+/* create another format for salary */
+proc format;
+   value salrange 20000 -< 50000 = 'Below $50,000'
+                  50000 -< 100000 = 'Between $50,000 to 100,000'
+				  100000 -< 500000 = '$100,000 or more'
+				  . = 'Missing salary'
+				  other = 'Invalid salary';
+run;
+
+/* create a table for frequency of salary range */
+
+proc freq data = orion.nonsales;
+   tables salary / missing;
+   format salary salrange.;
+run;
+
+/* create a permanant dataset called 'Asst' which
+   only includes the employees who have the word 'Assisstant' in 
+   the job_title. */
+* There are 43 employees meet the criterion.;
+
+
+data Asst;
+   set orion.nonsales;
+   where job_title contains 'Assistant';
+run;
+
+/* produce a report based on the requirments */
+
+proc print data = asst noobs split = ' ';
+   format gender $gender.
+          salary salrange.;
+   id employee_id;
+   label employee_id = 'Employee ID' 
+         job_title = 'Job Title';
+
+
+
+
+
+/*create a temporary dataset 'delays', create order_month
+		 to display month, create days4delivery, and choose disired observations. Then permanently
+		 label and format several variables and keep just part of them*/
+data delays;
+   set orion.orders;
+     where employee_id = 99999999; 
+     order_month = order_date; 
+     format order_month monname3.;
+     Days4Delivery = delivery_date - order_date;
+     if days4delivery > 4 and 6 <= month(order_month) <= 8;
+   
+     keep  Employee_ID Customer_ID Order_Date Delivery_Date Days4Delivery Order_Month;
+     label order_date = 'Date Ordered'
+         order_month = 'Month Ordered'
+		 days4delivery = 'Date Delivered';
+     format order_date mmddyy10. delivery_date mmddyy10.;
+      
+run;
+
+/* use proc contents to confirm all the formats and labels have been assigned parmanently. */
+proc contents data = delays;
+run;
+
+/* Print out the results. */
+proc print data = delays label noobs;
+   id employee_id;
+run;
+
+
+/* use proc import to import the excel worksheets. */
+proc import out = recruit datafile = 'C:\Users\zhyfly711\data\football.xls'  DBMS = xls replace;
+   sheet = 'footballrecruiting';
+   getnames = yes;
+run; 
+
+proc import out = colleges datafile = 'C:\Users\zhyfly711\Desktop\data\football.xls'  DBMS = xls replace;
+   sheet = 'colleges';
+   getnames = yes;
+run; 
+
+/* show the descriptor portion of the colleges dataset */
+
+proc contents data = colleges;
+run;
+
+proc print data = colleges (obs = 10);
+run;
+
+/* create a new data file based on several requirements */
+
+data new_colleges;
+   set colleges;
+   where type contains 'Private';
+   format students comma8. undergrads comma8.;
+   drop address type;
+run;
+
+/* create a new data set based on several requirements */
+
+data new_recruit;
+   set recruit;
+   label conf = 'Conference'
+         off = 'Offense'
+		 def = 'Defense'
+		 SpT = 'Special Teams';
+   
+   where rank <= 20 and substr(conf, length(conf), 1) = 'C';
+   drop points;
+run;
+
+/*print the dataset created in 4(e) with lables and sort by rank */
+
+proc sort data = new_recruit;
+   by rank;
+run;
+proc print data = new_recruit label;
+run;
+
+/* Deassign the libref created. */
+libname football clear;
+
+

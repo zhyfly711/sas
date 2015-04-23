@@ -1,0 +1,89 @@
+
+*Output the whole results;
+ods pdf file = 'C:\Users\zhyfly711\Desktop\results\project4.pdf';
+
+*create a new data set and format salary and hire date.;
+
+%let path = C:\Users\zhyfly711\Desktop\data;
+
+data sales;
+   infile "&path\sales3.dat";
+   input @1 employee_id 6.
+         @8 first_name $ 12.
+		 @21 last_name $18.
+		 @40 gender $1.
+		 @43 job_title $20.;
+   input @10 country $ 2. @;
+	  if country = 'US' then
+	     input @1 salary dollar8.
+		       @13 birth_date mmddyy10.
+			   @24 hire_date mmddyy10.;
+	  else if country = 'AU' then
+	     input @1 salary commax8.
+		       @13 birth_date ddmmyy10.
+			   @24 hire_date ddmmyy10.;
+   
+   format salary dollar8. hire_date date9. ;
+run;
+
+
+* Sort the data sales by country and job_title;
+proc sort data = sales;
+   by country job_title;
+run;
+
+* Calculate total salary and number of employees of each job title in each country;
+data sales1;
+   set sales;
+   by country job_title;
+   if first.job_title then do;
+      totalSalary = 0;
+	  totalEmployee = 0;
+   end;
+   totalSalary + salary;
+   totalEmployee + 1;
+   if last.job_title;
+run;
+
+*print out to confirm;
+proc print data = sales1;
+run;
+
+* Output us data to USJobTotals and au data to AUJobTotals, lable job_title and totalEmployee, and format totalSalary;
+data USJobTotals AUJobTotals;
+   set sales1;
+   keep job_title totalSalary totalEmployee;
+   label job_title = 'Job Tilte'
+         totalEmployee = 'Number of Employees';
+   format totalSalary dollar12.;
+     if country = 'AU' then output AUJobtotals;
+     else output USJobTotals;
+run;
+
+*print the two data sets;
+     
+proc print data = aujobtotals;
+run;
+proc print data = usjobtotals;
+run;
+
+
+*create new data set Reps4 with only Sales Rep. IV;
+
+data Reps4;
+   set sales (rename = (hire_date = aDate));
+   fullName = strip(first_name)!!' '!!strip(last_name);
+   age = int(('19OCT2014'd - birth_date)/365);
+   hire_date = put(aDate, date9.);
+   keep fullName age hire_date;
+   where upcase(job_title) = 'SALES REP. IV';
+run;
+
+proc print data = reps4;
+run;
+
+
+proc contents data = reps4;
+run;
+
+   
