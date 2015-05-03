@@ -14,8 +14,6 @@ data supplier;
 	      Supplier_Address Street_Number Country;
 run;
 
-
-
 /* Create a permanent SAS data set based on requirements. */
 libname result 'C:\Users\zhyfly711\Desktop\results';
 data result.supplier;
@@ -86,22 +84,6 @@ run;
 proc print data = salesmgmt label;
   var ID lastname jobtitle hiredate salary;
   format hiredate date9. salary dollar12.;
-run;
-
-
-libname orion 'C:\Users\zhyfly711\Desktop\data';
-data orion.GroupIntro_Take2;
-length FirstName $ 10 LastName $10 Gender $1 Reason $20;
-input FirstName $ LastName $ From $ Age Gender $ Reason $
-      StatCourses ProgramLanguage SASexperience $ GroupTrait $;
-datalines;
-Olaniran Olusola Nigeria 34 M SASBase 1 2 little StatCourses
-Candice Park US 24 F LearnSAS 3 1 little StatCourses
-Huiying Zhang China 33 F LearnSAS 15 1 little StatCourses
-;
-run;
-
-proc print data = orion.GroupIntro_Take2;
 run;
 
 
