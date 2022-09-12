@@ -1,0 +1,87 @@
+/***This project is to find out how age, income, smoking, gender, education influence the bmi.
+    Multi-linear regression will be used***/
+
+data temp;
+   set lib.survey_sub;
+run;
+ 
+*Plot numerical variable age vs bmi;
+ 
+proc gplot data=temp;
+   plot bmi*age;
+run;
+ 
+*Create a data file with only the variables that will be used.Create a new variable age_square since age effects
+on bmi is quadratic;
+ 
+proc sql;
+  create table hz_bmi_reg as
+  select diab, income, age, sex, educa, smoke, insur, race, bmi, age*age as age_square
+  from temp
+quit;
+ 
+*Check the data;
+proc freq data= hz_bmi_reg;
+   tables diab income sex educa smoke insur race;
+run;
+ 
+proc means data=hz_bmi_reg;
+   var diab income sex educa smoke insur race bmi;
+run;
+ 
+*test single predictors on bmi;
+ 
+%macro sim_lin(par);
+   proc anova data=hz_bmi_reg;
+     title "ANOVA of bmi on &par";
+     class &par;
+     model bmi=&par;
+   run;   
+%mend;
+ 
+%sim_lin(diab)
+%sim_lin(income)
+%sim_lin(sex)
+%sim_lin(educa)
+%sim_lin(smoke)
+%sim_lin(insur)
+%sim_lin(race)
+ 
+*Multiple linear regression;
+ 
+proc glm data=hz_bmi_reg;
+  title "multiple linear regression";
+  class diab income sex educa smoke race;
+  model bmi= diab income sex educa smoke race age age_square;
+run;
+ 
+ 
+*Multiple linear regression when controlling predictors;
+ 
+%macro multi_lin(diab1, diab2, sex1, sex2, smoke1, smoke2, race1, race2);
+    proc glm data=hz_bmi_reg;
+	  title "Regression of bmi_%unquote(&diab2)_%unquote(&sex2)_%unquote(&smoke2)_%unquote(&race2)";
+	  where diab=&diab1 and sex=&sex1 and smoke=&smoke1 and race=&race1;
+	  model bmi = age age_square income educa;
+	run;
+%mend;
+ 
+%multi_lin(0, nodiab, 0, m, 0, nosmok, 0, whi)
+%multi_lin(0, nodiab, 0, m, 0, nosmok, 1, bla)
+%multi_lin(0, nodiab, 0, m, 1, smoke, 1, bla)
+%multi_lin(0, nodiab, 0, m, 1, smoke, 0, whi)
+ 
+%multi_lin(0, nodiab, 1, f, 0, nosmok, 0, whi)
+%multi_lin(0, nodiab, 1, f, 0, nosmok, 1, bla)
+%multi_lin(0, nodiab, 1, f, 1, smoke, 1, bla)
+%multi_lin(0, nodiab, 1, f, 1, smoke, 0, whi)
+ 
+%multi_lin(1, diab, 0, m, 0, nosmok, 0, whi)
+%multi_lin(1, diab, 0, m, 0, nosmok, 1, bla)
+%multi_lin(1, diab, 0, m, 1, smoke, 1, bla)
+%multi_lin(1, diab, 0, m, 1, smoke, 0, whi)
+ 
+%multi_lin(1, diab, 1, f, 0, nosmok, 0, whi)
+%multi_lin(1, diab, 1, f, 0, nosmok, 1, bla)
+%multi_lin(1, diab, 1, f, 1, smoke, 1, bla)
+%multi_lin(1, diab, 1, f, 1, smoke, 0, whi)
