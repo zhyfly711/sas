@@ -28,6 +28,7 @@ run;
 proc means data=hz_bmi_reg;
    var diab income sex educa smoke insur race bmi;
 run;
+
  
 *test single predictors on bmi;
  
