@@ -1,0 +1,92 @@
+*This is an experiment using 2-way factorial ANOVA design. Cells were over-expressed with either lacZ or
+Sulf1, and treated with either control(NA) or cadmium(Cd). Regulation of each gene were analyzed to
+assess the association effects of Sulf1 over-expression and Cadmium treatment; 
+ 
+data regulation;
+input gene_name $ trt $ over_exp $ metal $ expression;
+datalines;
+ 
+ 
+*Sort the data by gene_name, over_exp, metal, and treatment;
+ 
+proc sort data=regulation;
+ by gene_name trt over_exp metal;
+run;
+ 
+/*create subset that only includes distinct gene_names*/
+ 
+proc sql;
+  create table subset as
+  select distinct gene_name 
+  from regulation
+quit;
+ 
+/*assign the values of 'gene_name' to macro variables gene1 to gene* */
+ 
+data _null_;
+   set subset;
+   call symput ('gene'||left(_n_),(trim(gene_name)));    
+run;
+ 
+*Write macro program 'associ_test' to do the factorial ANOVA test for each gene. ;
+ 
+%macro associ_test;   
+   proc glm data = &&gene&i;
+     title "Association test of Sulf1 and Cad treatment on &syslast";
+     class trt over_exp metal;
+     model expression = over_exp metal over_exp*metal;
+   run;
+%mend;
+ 
+*Calculate linear combinations of 'over_exp' and 'metal';
+ 
+%macro lin_combo;
+   proc glm data= &&gene&i;
+     title "Linear combination calculation on &&gene&i";
+     class trt over_exp metal;
+	 model expression = trt;
+ 
+	 estimate 'simple effects of over_exp, when metal=NA' trt -1 0 1 0;
+	 estimate 'simple effects of over_exp, when metal=Cd' trt 0 -1 0 1;
+	 estimate 'simple effects of metal, when over_exp=lacZ' trt -1 1 0 0;
+     estimate 'simple effects of metal, when over_exp=Sulf1' trt 0 0 -1 1;
+   run;
+%mend;
+ 
+*Get the interaction plot for each gene;
+ 
+%macro graph;
+   proc means data= &&gene&i;
+       by trt over_exp metal;	   
+       output out=&&gene&i mean=expmean;
+   run;
+ 
+   symbol1 color=red interpol=join line=1 value='A';
+   symbol2 color=blue interpol=join line=2 value='B';
+ 
+   proc gplot data=&&gene&i;
+       title "interaction plot of &&gene&i";
+       plot expmean*metal = over_exp;
+   run;
+%mend;
+ 
+*Write macro program diff_data and produce a dataset for each gene, and run several macro programs;
+ 
+%macro diff_data;
+  %local i;
+     %do i = 1 %to 26;
+        data &&gene&i;
+        set regulation;
+        where gene_name = "&&gene&i";
+   
+        %associ_test
+        %lin_combo
+        %graph
+   
+     %end;   
+  run;   
+%mend;
+ 
+*Call the macro program 'diff_data';
+ 
+%diff_data
