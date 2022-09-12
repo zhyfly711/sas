@@ -11,6 +11,7 @@ proc gplot data=temp;
    plot bmi*age;
 run;
  
+ 
 *Create a data file with only the variables that will be used.Create a new variable age_square since age effects
 on bmi is quadratic;
  
